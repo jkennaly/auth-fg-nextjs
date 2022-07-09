@@ -1,0 +1,25 @@
+{
+  "name": "@0441design/auth-fg-browser",
+  "version": "1.0.1",
+  "description": "browser jwt authentication for festigram api",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "authorization",
+    "authentication",
+    "oauth",
+    "jwt",
+    "token",
+    "auth",
+    "festigram"
+  ],
+  "author": "Jason Kennaly <jason@0441.design> (https://0441.design)",
+  "license": "MIT",
+  "type": "module",
+  "dependencies": {
+    "jwt-decode": "^3.1.2",
+    "lodash": "^4.17.21"
+  }
+}
