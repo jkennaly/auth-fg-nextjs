@@ -202,57 +202,41 @@ export default class Auth {
     async getGttRawRemote() {
         if (this.gettinGtt) return Promise.resolve('')
         this.gettinGtt = true
-        return (
-            this.getAccessToken()
-                .then(authResult => {
-                    if (typeof authResult !== 'string') throw new Error("not authorized")
-                    return authResult
-                })
-                .then(authResult => {
-                    const timeout = 1000
-                    const controller = new AbortController()
-                    const id = setTimeout(() => {
-                        //console.log('fetchT timed out')
-                        return controller.abort()
-                    }, timeout)
-                    const response = await fetch(this.apiUrl + "/api/Profiles/gtt", {
-                        method: "get",
-                        cache: "no-store",
-                        credentials: "include",
-                        signal: controller.signal,
-                        headers: new Headers(
-                            authResult
-                                ? Object.assign({}, headerBase, {
-                                    Authorization: `Bearer ${authResult}`,
+        try {
+            const authResult = await this.getAccessToken()
+            if (typeof authResult !== 'string') throw new Error("not authorized")
+            const timeout = 1000
+            const controller = new AbortController()
+            const id = setTimeout(() => {
+                //console.log('fetchT timed out')
+                return controller.abort()
+            }, timeout)
+            const response = await fetch(this.apiUrl + "/api/Profiles/gtt", {
+                method: "get",
+                cache: "no-store",
+                credentials: "include",
+                signal: controller.signal,
+                headers: new Headers(
+                    authResult
+                        ? Object.assign({}, headerBase, {
+                            Authorization: `Bearer ${authResult}`,
 
-                                })
-                                : headerBase
-                        ),
-                    })
-                    clearTimeout(id)
-                    return response
-                })
-                .then(response => {
-                    //console.log('gtt', response)
-                    if (isArray(response)) return response
-                    try {
-                        return response.json()
-                    } catch (err) {
-                        console.error(err)
-                        return []
-                    }
-                })
-                .then(json => json.token)
-                .then(gtt => {
-                    localStorage.setItem("gtt", gtt)
-                    this.gettinGtt = false
-                    return gtt
-                })
-                .catch(err => {
-                    if (err.error === 'login_required' || err === 'login required' || err.message === 'login required' || err === 'auth fail') return
-                    console.error(err)
-                })
-        )
+                        })
+                        : headerBase
+                ),
+            })
+            clearTimeout(id)
+            //console.log('gtt', response)
+            const { token: gtt } = await response.json()
+            localStorage.setItem("gtt", gtt)
+            this.gettinGtt = false
+            return gtt
+        } catch (err) {
+            if (err.error === 'login_required' || err === 'login required' || err.message === 'login required' || err === 'auth fail') return ''
+            console.error(err)
+            this.gettinGtt = false
+            throw err
+        }
     }
 
     async getGttRaw() {
