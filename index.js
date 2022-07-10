@@ -1,5 +1,3 @@
-import isArray from "lodash/isArray"
-import isInteger from "lodash/isInteger"
 import jwt_decode from "jwt-decode"
 const headerBase = {
     "Content-Type": "application/json"
@@ -53,7 +51,7 @@ const userIdFromToken = apiUrl => async (authResult) => {
         clearTimeout(timer)
         const { id } = await response.json()
         if (!id) throw "invalid id received from getFtUserId() " + id
-        if (isInteger(id)) localStorage.setItem("ft_user_id", id)
+        if (typeof id === 'number') localStorage.setItem("ft_user_id", id)
         return id
     } catch (err) {
         console.error(err)
