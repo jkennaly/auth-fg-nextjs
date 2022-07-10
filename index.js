@@ -4,6 +4,7 @@ const headerBase = {
 }
 
 var dataReset = () => true
+let lastState = {}
 
 const tokenIsValid = token => {
     if (!token) return false
@@ -69,6 +70,7 @@ export default class Auth {
                 lastState = {
                     route: prev,
                 }
+                clean()
                 window.location.assign(
                     this.AUTH_DATA.LOGINURL +
                     `?cb=${encodeURIComponent(this.AUTH_DATA.CALLBACKURL)}`
@@ -155,6 +157,7 @@ export default class Auth {
         if (localValid) return localToken
         //try for refresh
         if (localToken && !this.refreshing) {
+            //console.log("refreshing token")
             this.refreshing = true
             try {
                 const timeout = 1000
@@ -163,30 +166,37 @@ export default class Auth {
                     //console.log('fetchT timed out')
                     return controller.abort()
                 }, timeout)
+                //console.log("refreshnow")
                 const response = await fetch(this.apiUrl + "/authorize/refresh", {
                     method: "get",
                     cache: "no-store",
                     credentials: "include",
                     signal: controller.signal,
                     headers: new Headers(
-                        authResult
+                        localToken
                             ? Object.assign({}, headerBase, {
-                                Authorization: `Bearer ${authResult}`,
+                                Authorization: `Bearer ${localToken}`,
 
                             })
                             : headerBase
                     ),
                 })
+
                 clearTimeout(timer)
+                if (!response.ok) throw response
+                //console.log("refreshdone", response)
                 const { token } = await response.json()
                 if (token) {
                     localStorage.setItem("local_token", token)
                     return token
                 }
             } catch (err) {
-                if (err && err.code) {
+                if (err && err.status === 401) {
                     clean()
+                    console.log("refresh failed", err)
+                    return ''
                 } else {
+                    console.log("refresh error", err)
                     return ''
                 }
 
@@ -247,7 +257,7 @@ export default class Auth {
         return this.getGttRaw().then(jwt_decode)
     }
 
-    getBothTokens() {
+    async getBothTokens() {
         const access = this.getAccessToken()
         const gtt = this.getGttRaw()
         return Promise.all([access, gtt])
@@ -257,7 +267,7 @@ export default class Auth {
     }
     getRoles() {
         return this.getIdTokenClaims().then(
-            claims => claims["https://festigra1app/roles"]
+            claims => claims["https://festigram.app/roles"]
         )
     }
     cacheCleaner(dataClear) {
