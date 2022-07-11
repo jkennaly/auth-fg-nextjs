@@ -8,22 +8,21 @@ let lastState = {}
 
 const tokenIsValid = token => {
     if (!token) return false
-    const decoded = jwt_decode(token)
-    const expiration = decoded.exp * 1000
-    const now = Date.now()
-    const expired = expiration - now < 0
-    //console.log(expiration, now, expired)
-    return !expired
+    try {
+        const decoded = jwt_decode(token)
+        const expiration = decoded.exp * 1000
+        const now = Date.now()
+        const expired = expiration - now < 0
+        return !expired
+    } catch (err) {
+        return false
+    }
 }
 
 const clean = () => {
     localStorage.clear()
-    dataReset()
+    return dataReset()
 }
-
-const authLoad = window.mockery
-    ? Promise.reject("mocked")
-    : Promise.resolve(true)
 
 const userIdFromToken = apiUrl => async (authResult) => {
     const localId = JSON.parse(localStorage.getItem("ft_user_id"))
@@ -32,7 +31,6 @@ const userIdFromToken = apiUrl => async (authResult) => {
         const timeout = 1000
         const controller = new AbortController()
         const timer = setTimeout(() => {
-            //console.log('fetchT timed out')
             return controller.abort()
         }, timeout)
         const response = await fetch(apiUrl + "/api/Profiles/getUserId/", {
@@ -50,7 +48,8 @@ const userIdFromToken = apiUrl => async (authResult) => {
             ),
         })
         clearTimeout(timer)
-        const { id } = await response.json()
+        const json = await response.json()
+        const id = json.id
         if (!id) throw "invalid id received from getFtUserId() " + id
         if (typeof id === 'number') localStorage.setItem("ft_user_id", id)
         return id
@@ -58,64 +57,36 @@ const userIdFromToken = apiUrl => async (authResult) => {
         console.error(err)
     }
 }
-
 export default class Auth {
     constructor(AUTH_DATA, API_URL) {
         this.AUTH_DATA = AUTH_DATA
         this.apiUrl = API_URL
     }
     login(prev) {
-        authLoad
-            .then(() => {
-                lastState = {
-                    route: prev,
-                }
-                clean()
-                window.location.assign(
-                    this.AUTH_DATA.LOGINURL +
-                    `?cb=${encodeURIComponent(this.AUTH_DATA.CALLBACKURL)}`
-                )
-            })
-            .catch(err => console.error("login error", err))
-    }
-
-    handleAuthentication() {
-        const query = window.location.href
-        //console.log('local handleAuthentication', query)
-
-        const token = query.match(/[?&]token=([^&]+).*$/)[1]
-        //console.log('handleAuthentication query', query, token)
-
-        //store the token
-        localStorage.setItem("local_token", token)
-        //console.log('local_token reload', localStorage.getItem('local_token'))
-        //get the ftUserId
-        return this.getFtUserId()
-            .then(id => localStorage.setItem("ft_user_id", id))
-            .then(() => this.getRoles())
-            .then(roles =>
-                localStorage.setItem("ft_user_roles", JSON.stringify(roles))
-            )
+        lastState = {
+            route: prev,
+        }
+        clean()
+        const url = `${this.AUTH_DATA.LOGINURL}?cb=${encodeURIComponent(this.AUTH_DATA.CALLBACKURL)}`
+        window.location.assign(url)
+        return url
     }
 
     gtt() {
-        //console.log('auth gtt')
-        //console.log(gttCache)
         const local = localStorage.getItem("gtt")
         return local
     }
 
     userGtt() {
-        //console.log('auth gtt')
-        //console.log(gttCache)
         const local = this.gtt()
-        if (local) return jwt_decode(local)
-        return {}
+        try {
+            if (local) return jwt_decode(local)
+        } catch (err) {
+            return {}
+        }
     }
 
     userId() {
-        //console.log('auth userId')
-        //console.log(userIdCache)
         const local = parseInt(localStorage.getItem("ft_user_id"), 10)
         if (local) return local
         if (local === NaN) localStorage.clearItem("ft_user_id")
@@ -123,19 +94,13 @@ export default class Auth {
     }
 
     userRoles() {
-        //console.log('auth userId')
-        //console.log(userIdCache)
         try {
             const local = JSON.parse(localStorage.getItem("ft_user_roles"))
             if (local) return local
+            return []
         } catch (err) {
             return []
         }
-    }
-
-    //returns a promise that resolves to a userIdCache
-    getFtUserId() {
-        return this.getAccessToken().then(userIdFromToken(this.apiUrl))
     }
 
     logout(skipRoute) {
@@ -143,30 +108,23 @@ export default class Auth {
         clean()
         window.location.assign("/")
     }
-
-    isAuthenticated() {
-        return this.getIdTokenClaims().then(
-            claims => claims && claims.exp > Date.now() / 1000
-        )
+    cacheCleaner(dataClear) {
+        dataReset = dataClear
     }
 
     async getAccessToken() {
-        //console.log('trying to retrieve token')
         const localToken = localStorage.getItem("local_token")
         const localValid = tokenIsValid(localToken)
         if (localValid) return localToken
         //try for refresh
         if (localToken && !this.refreshing) {
-            //console.log("refreshing token")
             this.refreshing = true
             try {
                 const timeout = 1000
                 const controller = new AbortController()
                 const timer = setTimeout(() => {
-                    //console.log('fetchT timed out')
                     return controller.abort()
                 }, timeout)
-                //console.log("refreshnow")
                 const response = await fetch(this.apiUrl + "/authorize/refresh", {
                     method: "get",
                     cache: "no-store",
@@ -181,22 +139,18 @@ export default class Auth {
                             : headerBase
                     ),
                 })
-
                 clearTimeout(timer)
                 if (!response.ok) throw response
-                //console.log("refreshdone", response)
                 const { token } = await response.json()
                 if (token) {
                     localStorage.setItem("local_token", token)
                     return token
-                }
+                } else throw response
             } catch (err) {
                 if (err && err.status === 401) {
                     clean()
-                    console.log("refresh failed", err)
                     return ''
                 } else {
-                    console.log("refresh error", err)
                     return ''
                 }
 
@@ -205,6 +159,46 @@ export default class Auth {
             }
         }
         throw new Error('login required')
+    }
+
+    //returns a promise that resolves to a userIdCache
+    getFtUserId() {
+        return this.getAccessToken().then(userIdFromToken(this.apiUrl))
+    }
+    async getIdTokenClaims() {
+        try {
+            const token = await this.getAccessToken()
+            const decoded = jwt_decode(token)
+            return decoded
+        } catch (err) {
+            return {}
+        }
+    }
+
+    isAuthenticated() {
+        return this.getIdTokenClaims().then(
+            claims => claims && claims.exp > Date.now() / 1000
+        )
+    }
+    async getRoles() {
+        const claims = await this.getIdTokenClaims()
+        return claims["https://festigram.app/roles"]
+    }
+
+    handleAuthentication() {
+        const query = window.location.href
+
+        const token = query.match(/[?&]token=([^&]+).*$/)[1]
+
+        //store the token
+        localStorage.setItem("local_token", token)
+        //get the ftUserId
+        return this.getFtUserId()
+            .then(id => localStorage.setItem("ft_user_id", id))
+            .then(() => this.getRoles())
+            .then(roles => {
+                localStorage.setItem("ft_user_roles", JSON.stringify(roles))
+            })
     }
 
     async getGttRawRemote() {
@@ -216,7 +210,6 @@ export default class Auth {
             const timeout = 1000
             const controller = new AbortController()
             const id = setTimeout(() => {
-                //console.log('fetchT timed out')
                 return controller.abort()
             }, timeout)
             const response = await fetch(this.apiUrl + "/api/Profiles/gtt", {
@@ -234,16 +227,15 @@ export default class Auth {
                 ),
             })
             clearTimeout(id)
-            //console.log('gtt', response)
+            if (!response.ok) throw response
             const { token: gtt } = await response.json()
             localStorage.setItem("gtt", gtt)
             this.gettinGtt = false
             return gtt
         } catch (err) {
             if (err.error === 'login_required' || err === 'login required' || err.message === 'login required' || err === 'auth fail') return ''
-            console.error(err)
             this.gettinGtt = false
-            throw err
+            return ''
         }
     }
 
@@ -253,24 +245,10 @@ export default class Auth {
     }
 
     async getGttDecoded() {
-
-        return this.getGttRaw().then(jwt_decode)
-    }
-
-    async getBothTokens() {
-        const access = this.getAccessToken()
-        const gtt = this.getGttRaw()
-        return Promise.all([access, gtt])
-    }
-    getIdTokenClaims() {
-        return this.getAccessToken().then(jwt_decode)
-    }
-    getRoles() {
-        return this.getIdTokenClaims().then(
-            claims => claims["https://festigram.app/roles"]
-        )
-    }
-    cacheCleaner(dataClear) {
-        dataReset = dataClear
+        try {
+            return this.getGttRaw().then(jwt_decode)
+        } catch (err) {
+            return {}
+        }
     }
 }
