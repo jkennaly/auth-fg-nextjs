@@ -147,7 +147,7 @@ export default class Auth {
                     return token
                 } else throw response
             } catch (err) {
-                if (err && err.status === 401) {
+                if (err && err.status === 403) {
                     clean()
                     return ''
                 } else {
@@ -161,7 +161,6 @@ export default class Auth {
         throw new Error('login required')
     }
 
-    //returns a promise that resolves to a userIdCache
     getFtUserId() {
         return this.getAccessToken().then(userIdFromToken(this.apiUrl))
     }
