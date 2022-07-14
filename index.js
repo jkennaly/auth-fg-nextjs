@@ -4,7 +4,7 @@ import jwks from 'jwks-rsa'
 
 let userPromise;
 
-const authConfig = {}
+let authConfig = {}
 
 export default function setup({ authData, apiUrl }) {
     authConfig = new Core(authData, apiUrl);
