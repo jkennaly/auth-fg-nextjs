@@ -1,6 +1,6 @@
 {
   "name": "@0441design/auth-fg-nextjs",
-  "version": "5.0.0",
+  "version": "5.0.1",
   "description": "nextjs jwt authentication for festigram api",
   "main": "index.js",
   "scripts": {
