@@ -76,14 +76,6 @@ export const useUser = () => {
     }
 }
 
-export const UserProvider = ({ children }) => {
-
-    return (
-        <div>
-            {children}
-        </div>
-    )
-}
 
 /**
  * From: https://ourcodeworld.com/articles/read/317/how-to-check-if-a-javascript-promise-has-been-fulfilled-rejected-or-resolved
