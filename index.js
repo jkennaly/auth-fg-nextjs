@@ -1,11 +1,13 @@
-import core from '@0441design/auth-fg-browser'
+import Core from '@0441design/auth-fg-browser'
 import jwt from 'express-jwt'
 import jwks from 'jwks-rsa'
 
 let userPromise;
 
-export default function setup(options) {
+const authConfig = {}
 
+export default function setup({ authData, apiUrl }) {
+    authConfig = new Core(authData, apiUrl);
 }
 
 
@@ -32,9 +34,10 @@ export const withApiAuthRequired = async (apiPage) => (req, res) => {
 }
 
 export const withPageAuthRequired = async (page) => {
+    if (!authConfig.getRoles) throw new Error("authConfig.getRoles is not defined");
     try {
 
-        const roles = await core.getRoles()
+        const roles = await authConfig.getRoles()
         if (!roles || !roles.length) throw new Error('No roles found')
         return page
     } catch (error) {
@@ -45,11 +48,15 @@ export const withPageAuthRequired = async (page) => {
 
 }
 
-export const getAccessToken = core.getAccessToken
+export const getAccessToken = async (...args) => {
+    if (!authConfig.getAccessToken) throw new Error("authConfig.getAccessToken is not defined");
+    return authConfig.getAccessToken(args)
+}
 
 export const useUser = () => {
+    if (!authConfig.getIdTokenClaims) throw new Error("authConfig.getIdTokenClaims is not defined");
     if (!userPromise) {
-        userPromise = makeQuerablePromise(core.getIdTokenClaims())
+        userPromise = makeQuerablePromise(authConfig.getIdTokenClaims())
         return {
             isLoading: true
         }
