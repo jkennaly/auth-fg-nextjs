@@ -20,7 +20,8 @@
   "license": "MIT",
   "type": "module",
   "dependencies": {
-    "@0441design/auth-fg-browser": "^1.2.0"
+    "@0441design/auth-fg-browser": "^1.2.0",
+    "express-jwt": "^7.7.5"
   },
   "devDependencies": {
     "@vitest/ui": "^0.18.0",
