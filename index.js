@@ -1,6 +1,6 @@
 import core from '@0441design/auth-fg-browser'
-var jwt = require('express-jwt');
-var jwks = require('jwks-rsa');
+import jwt from 'express-jwt'
+import jwks from 'jwks-rsa'
 
 let userPromise;
 
