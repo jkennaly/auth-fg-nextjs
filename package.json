@@ -1,7 +1,7 @@
 {
-  "name": "@0441design/auth-fg-browser",
-  "version": "2.0.0",
-  "description": "browser jwt authentication for festigram api",
+  "name": "@0441design/auth-fg-nextjs",
+  "version": "1.0.0",
+  "description": "nextjs jwt authentication for festigram api",
   "main": "index.js",
   "scripts": {
     "test": "npx vitest --coverage"
@@ -15,13 +15,12 @@
     "auth",
     "festigram"
   ],
+  "repository": "https://github.com/jkennaly/auth-fg-nextjs.git",
   "author": "Jason Kennaly <jason@0441.design> (https://0441.design)",
   "license": "MIT",
   "type": "module",
   "dependencies": {
-    "@0441design/auth-fg-browser": "^1.2.0",
-    "express-jwt": "^7.7.5",
-    "jwks-rsa": "^2.1.4"
+    "@0441design/auth-fg-browser": "^1.2.0"
   },
   "devDependencies": {
     "@vitest/ui": "^0.18.0",
